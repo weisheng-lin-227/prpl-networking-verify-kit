@@ -1,0 +1,26 @@
+# networking_verify_kit — git 追蹤邊界
+#
+# ✅ 發布（git 追蹤）= 方法論 + 工具：
+#   README.md / METHODOLOGY.md / SANITIZE.md / LICENSE
+#   + ns_verify.sh / pc2_lan_netns.sh / check_secrets.sh / bench.env.example
+#
+# 🔒 以下永不追蹤、不上傳（本地保留供執行/閱讀）：
+
+# ── 機密真值（node access inventory）──
+bench.env
+
+# ── 私有：內部完整文件（操作指南/環境/測試計畫/落地對照/完整踩坑庫，含特定產品 findings 與源碼證據）──
+private/
+
+# ── 產出物（證據與結果紀錄，測試的輸出非輸入）──
+evidence/
+*_RESULTS.md
+*_report.md
+
+# ── 打包產物（避免 naive tar/zip 把機密包進去；發布請用 git archive）──
+*.tar
+*.tar.gz
+*.tgz
+*.zip
+dist/
+release/
