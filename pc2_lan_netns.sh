@@ -31,7 +31,7 @@ NM_CON="${ARMB_NM_CON:-Wired connection 2}"  # armB 的 NM 連線（回復用）
 die(){ echo "FATAL: $*" >&2; exit 1; }
 
 guard(){
-  # 三重防呆（守住 SSH 命脈 armA，codex review #2）：
+  # 三重防呆（守住 SSH 命脈 armA，cross-review #2）：
   # (1) 明確拒絕 IF=armA 介面名
   [ "$IF" = "$ARMA_IF" ] && die "IF=$ARMA_IF 是 armA/SSH 命脈，拒絕執行。"
   # (2) IF 不可帶 armA 的 IP
@@ -44,7 +44,7 @@ guard(){
   return 0
 }
 
-# 冪等補齊 netns 內設定（v4 addr / default route / offload / accept_ra），可重複呼叫自癒（codex #3）
+# 冪等補齊 netns 內設定（v4 addr / default route / offload / accept_ra），可重複呼叫自癒（cross-review #3）
 ensure_cfg(){
   ip netns exec "$NS" ip -4 addr show "$IF" 2>/dev/null | grep -qw "$ARMB_IP" \
     || ip netns exec "$NS" ip addr add "$ARMB_CIDR" dev "$IF" || die "配 $ARMB_CIDR 失敗"
@@ -60,7 +60,7 @@ up(){
   if ip netns list 2>/dev/null | grep -qw "$NS" && ip netns exec "$NS" ip link show "$IF" >/dev/null 2>&1; then
     echo "[up] netns $NS 已存在且 $IF 已在其中（idempotent：驗證並補齊設定）"
     ip netns exec "$NS" ip link set "$IF" up || die "$IF up 失敗"
-    ensure_cfg            # codex #3：補齊 addr/route/offload/RA，修復前次半失敗
+    ensure_cfg            # cross-review #3：補齊 addr/route/offload/RA，修復前次半失敗
     status; return 0
   fi
   echo "[up] 1) NM 放手 $IF"
@@ -69,7 +69,7 @@ up(){
   ip netns add "$NS" 2>/dev/null || true
   ip netns exec "$NS" ip link set lo up
   echo "[up] 3) move 物理 NIC $IF 進 netns（會清掉原 IP/route）"
-  ip link set "$IF" netns "$NS" || die "move $IF 進 netns 失敗（codex #1 fail-fast）"
+  ip link set "$IF" netns "$NS" || die "move $IF 進 netns 失敗（cross-review #1 fail-fast）"
   echo "[up] 4) netns 內配 v4 static + SLAAC v6（+ P-58 capture 保真）"
   ip netns exec "$NS" ip link set "$IF" up || die "$IF up 失敗"
   ip netns exec "$NS" sysctl -qw net.ipv6.conf."$IF".disable_ipv6=0 2>/dev/null || true
@@ -82,12 +82,12 @@ up(){
 
 down(){
   if ip netns list 2>/dev/null | grep -qw "$NS"; then
-    # codex #5：netns 內若有 process hold，del 只刪名字、NIC 會困匿名 netns → 先警示
+    # cross-review #5：netns 內若有 process hold，del 只刪名字、NIC 會困匿名 netns → 先警示
     pids=$(ip netns pids "$NS" 2>/dev/null)
     [ -n "$pids" ] && echo "  ⚠ netns $NS 內仍有 process（pid: $pids），先確認再續" >&2
     echo "[down] 1) 把 $IF 移回 host netns"
     ip netns exec "$NS" ip link set "$IF" netns 1 2>/dev/null \
-      || die "把 $IF 移回 host 失敗 → 拒絕 netns del（避免 NIC 困匿名 netns，codex #5）"
+      || die "把 $IF 移回 host 失敗 → 拒絕 netns del（避免 NIC 困匿名 netns，cross-review #5）"
     ip link show "$IF" >/dev/null 2>&1 || die "$IF 未出現在 host（移回異常），中止 del"
     ip netns del "$NS" 2>/dev/null || true
   else
@@ -97,7 +97,7 @@ down(){
   echo "[down] 2) NM 收回管理 + 重新拉起連線（autoconnect 應自動 DHCP 復原 .3）"
   nmcli device set "$IF" managed yes 2>/dev/null || true
   nmcli con up "$NM_CON" 2>/dev/null || echo "  ⚠ nmcli con up '$NM_CON' 失敗（連線名變了?）" >&2
-  # codex #4：等 DHCP 並 assert .3（bench contract），失敗 loud
+  # cross-review #4：等 DHCP 並 assert .3（bench contract），失敗 loud
   i=0; while [ $i -lt 10 ]; do ip -4 addr show "$IF" 2>/dev/null | grep -qw "$ARMB_IP" && break; i=$((i+1)); sleep 1; done
   echo "[down] 復原後 $IF："; ip -br addr show "$IF"
   if ip -4 addr show "$IF" 2>/dev/null | grep -qw "$ARMB_IP"; then

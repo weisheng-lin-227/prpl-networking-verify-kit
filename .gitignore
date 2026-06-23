@@ -1,7 +1,7 @@
 # networking_verify_kit — git 追蹤邊界
 #
 # ✅ 發布（git 追蹤）= 方法論 + 工具：
-#   README.md / METHODOLOGY.md / SANITIZE.md / LICENSE
+#   README.md / METHODOLOGY.md / SANITIZE.md / AGENTS.md / LICENSE
 #   + ns_verify.sh / pc2_lan_netns.sh / check_secrets.sh / bench.env.example
 #
 # 🔒 以下永不追蹤、不上傳（本地保留供執行/閱讀）：

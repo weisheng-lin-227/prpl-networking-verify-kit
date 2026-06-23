@@ -65,7 +65,7 @@ trap cleanup EXIT
 
 # ----------------------------- node helpers -----------------------------
 dut(){      ssh $SSH_DUT root@$DUT "$@" 2>/dev/null; }                              # DUT root（單一 master）
-flybox(){   sshpass -p '' ssh $SSH_GEN root@$FLYBOX "$@" 2>/dev/null; }             # flybox root
+flybox(){   sshpass -p "${FLYBOX_PW:-}" ssh $SSH_GEN root@$FLYBOX "$@" 2>/dev/null; }             # flybox root
 pc2(){      sshpass -p "$PC2_LOGIN_PW" ssh $SSH_GEN $PC2_USER@$PC2 "$@" 2>/dev/null; }            # PC2 非 root
 pc2root(){  sshpass -p "$PC2_LOGIN_PW" ssh $SSH_GEN $PC2_USER@$PC2 "echo '$PC2_ROOT_PW' | sudo -S -p '' $*" 2>/dev/null; }  # PC2 root（P-02）
 
@@ -126,8 +126,8 @@ test_masq(){
   sleep 2                                   # 等 tcpdump 起來（standalone script 可 sleep）
   ping -c5 "$PC2" >/dev/null 2>&1
   wait "$pid" 2>/dev/null
-  if grep -q "$DUT_WAN > $PC2" "$cap"; then
-    rec "NS-MASQ" PASS "PC2 收到來源=$DUT_WAN（DUT 做了 SNAT，原始來源 $LAN_CLIENT_IP 被改寫）"
+  if grep -q "${DUT_WAN%/*} > $PC2" "$cap"; then
+    rec "NS-MASQ" PASS "PC2 收到來源=${DUT_WAN%/*}（DUT 做了 SNAT，原始來源 $LAN_CLIENT_IP 被改寫）"
   elif grep -q "$LAN_CLIENT_IP > $PC2" "$cap"; then
     rec "NS-MASQ" FAIL "PC2 收到原始來源 $LAN_CLIENT_IP（NAT 沒生效！）"
   else
@@ -140,7 +140,7 @@ test_masq(){
 test_wan_ingress(){
   echo "== NS-WANIN: WAN ingress 預設 drop =="
   # 從 WAN 側（PC1-eth2 直連）ping DUT-WAN，應該不通
-  if ping -I "$WAN_IF" -c2 -W2 "$DUT_WAN" >/dev/null 2>&1; then
+  if ping -I "$WAN_IF" -c2 -W2 "${DUT_WAN%/*}" >/dev/null 2>&1; then
     rec "NS-WANIN" FAIL "DUT-WAN 回應 WAN 側 ping（防火牆沒擋？需確認是否預期）"
   else
     rec "NS-WANIN" PASS "DUT-WAN 不回 WAN 側 ping（CPE 預設安全姿態，正確）"
@@ -350,6 +350,6 @@ case "${1:-help}" in
   datapath) shift; datapath "$@" ;;
   l3verify) shift; l3verify "$@" ;;
   clockcheck) shift; clockcheck "$@" ;;
-  help|*) sed -n '3,29p' "$0" ;;
+  help|*) sed -n '3,27p' "$0" ;;
 esac
 fi

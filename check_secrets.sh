@@ -10,9 +10,10 @@ ENV="${BENCH_ENV:-./bench.env}"
 [ -f "$ENV" ] || { echo "⚠ 缺 $ENV，無法掃描（cp bench.env.example bench.env 並填）" >&2; exit 2; }
 . "$ENV"
 
-# 待掃清單：git 追蹤檔（最準）；非 git 則根目錄公開檔。排除掃描器與範本自身。
+# 待掃清單＝即將發布面：git 追蹤檔 + 未追蹤但未被 ignore 的檔（涵蓋新建未 add 的公開檔，
+# 這正是 agent 產出公開軌新檔最常見的狀態）；非 git 則根目錄公開檔。排除掃描器與範本自身。
 if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-  mapfile -t files < <(git ls-files)
+  mapfile -t files < <(git ls-files --cached --others --exclude-standard)
 else
   mapfile -t files < <(ls ./*.md ./*.sh ./*.example 2>/dev/null | sed 's|^\./||')
 fi

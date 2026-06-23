@@ -6,7 +6,7 @@ title: networking_verify_kit — TR-181 CPE 北向→南向驗證套件
 
 > 一套在 **TR-181 data-model 驅動的 OpenWrt CPE**（含 Broadcom 硬體 flow offload）上，
 > 系統化驗證「北向設定 → 南向落地 → 封包真實行為」是否貫通的 **方法論 + 自動化 harness**。
-> 方法論萃取、harness 設計與發布前檢查由 **AI agent 協作**（執行 / 裁定 / cross-review）完成。
+> 方法論萃取、harness 設計與發布前檢查由 **AI agent 協作**（agent 1 指揮＋裁定、agent 2 執行、必要時 cross-review）完成。
 
 ## 這是什麼
 
@@ -49,7 +49,7 @@ source bench.env && source ns_verify.sh
 
 LAN 端點測項需先把 `pc2_lan_netns.sh` + `bench.env` 部署到 observer，`up` 建好 netns。
 
-> **節點角色 ↔ 變數名**：`DUT`=受測 CPE｜`FLYBOX`=upstream gateway｜`PC2`/`armA`=observer（WAN 抓包+harness host）｜`armB`=LAN client（netns 隔離）。變數名沿用 legacy 代號，語意見此對照與 `bench.env.example` 註解。
+> **節點角色 ↔ 變數名**：`DUT`=受測 CPE｜`FLYBOX`=upstream gateway｜`PC2`/`armA`=observer（WAN 抓包點）｜`armB`=LAN client（netns 隔離）。`ns_verify.sh` 跑在你的控制機、SSH 連各節點（PC2 也是 SSH 目標，非執行處）。變數名沿用 legacy 代號，語意見此對照與 `bench.env.example` 註解。
 
 ## 去識別 E2E 範例
 
