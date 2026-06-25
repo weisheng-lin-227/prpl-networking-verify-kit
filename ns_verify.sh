@@ -20,7 +20,7 @@
 #   ./ns_verify.sh cap <if> <s> <flt> # PC2 tcpdump -U 擷取（P-58）
 #   ./ns_verify.sh reach <ip> <port>  # payload-based 可達（取代 nc $?，P-29）
 #   ./ns_verify.sh pflow              # 持久流 staleness 測法範式（P-60）
-#   ./ns_verify.sh datapath [tuple]   # DUT flow-cache/offload 快照（HW vs SW，P-38/50/62）
+#   ./ns_verify.sh datapath [tuple]   # DUT flow-cache/offload 快照（HW vs SW，P-38/50/62/70/72/73）
 #   ./ns_verify.sh l3verify <id> <dm-path> <chain>  # P-22 三層落地一次收齊
 #   ./ns_verify.sh clockcheck [thr-s] # 各 node UTC 時鐘漂移（P-48）
 #   source ./ns_verify.sh             # 只載入 helper，自己組測項
@@ -254,7 +254,7 @@ EOF
 #   給 pattern（如 "<DUT-WAN-IP>" 或 "dport=9999"）只看該 5-tuple 在 HW/SW
 datapath(){
   local pat="${1:-}"
-  echo "== DUT datapath / flow-cache snapshot (P-38/50/62) =="
+  echo "== DUT datapath / flow-cache snapshot (P-38/50/62/70/72/73) =="
   dut '
     echo "--- fcctl status (active flows / idle-timer / evict) ---"
     fcctl status 2>/dev/null | sed -n "1,40p" || echo "  (fcctl status n/a)"
@@ -264,6 +264,15 @@ datapath(){
     cat /proc/fcache/stats/evict 2>/dev/null || echo "  (n/a)"
     echo "--- conntrack accel 標記 (hwaccel=2 Runner fast-path / 0 slow-path, P-62) ---"
     cat /proc/net/nf_conntrack 2>/dev/null | grep -oE "(sw|hw)accel=[0-9]+" | sort | uniq -c || echo "  (n/a)"
+    echo "--- bs /b/e ucast (per-flow HW 5-tuple + NAT 後位址, P-70) ---"
+    bs /b/e ucast 2>/dev/null | grep -oE "src_ip=[0-9.]+,dst_ip=[0-9.]+,prot=[0-9]+,src_port=[0-9]+,dst_port=[0-9]+,dir=[a-z]+" | head -6 || echo "  (n/a)"
+    echo "--- pktrunner accel0 (Runner ucast_active + flows/L3 valid-RDPA, P-70) ---"
+    grep -E "^active|^ucast_active|^mcast_active" /proc/pktrunner/accel0/stats 2>/dev/null
+    cat /proc/pktrunner/accel0/flows/L3 2>/dev/null | grep -E "valid RDPA Key|matching flows" || echo "  (n/a)"
+    echo "--- blogctl skip-reason (為何沒被 offload＝資格層, P-72) ---"
+    blogctl stats 2>/dev/null | grep -E "blog_xfer|blog_skip_reason_(ct_not_confirmed|ct_status_donot_blog|esp4_spu_disabled)" || echo "  (n/a)"
+    echo "--- bs /b/e system stat drop-reason (為何在 HW 被 DROP, P-73) ---"
+    bs /b/e system stat 2>/dev/null | tr "," "\n" | grep -E "aqm_drop|qm_wred_drop|ingress_isolation_drop|ingress_rate_limit_drop|ingress_resources_congestion_drop|red_policer_drop" | head -8 || echo "  (n/a)"
   '
   if [ -n "$pat" ]; then
     echo "--- nflist + conntrack 過濾 '$pat'（該 flow 在 HW 還 SW?）---"
